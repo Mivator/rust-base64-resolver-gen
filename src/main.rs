@@ -1,6 +1,7 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder, Result, Error};
 use futures::StreamExt;
 use serde_json::Value;
+use serde_json::json;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use mime::IMAGE_PNG;
@@ -44,8 +45,10 @@ async fn post_image(
     let id = Uuid::new_v4().to_string();
     data.images.lock().unwrap().insert(id.clone(), decoded_bytes);
 
-    let url = format!("/image/{}", id);
-    Ok(HttpResponse::Ok().body(url))
+    let path = format!("/image/{}", id);
+    Ok(HttpResponse::Ok().json(json!({
+        "urlPath": path,
+    })))
 }
 
 async fn get_image(
