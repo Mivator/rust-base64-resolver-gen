@@ -1,6 +1,3 @@
-Here's a README template for your Rust project, `rust-base64-resolver-gen`, which generates image endpoints by posting base64 image data to a temporary URL. This README includes an overview, installation instructions, usage examples, and a tutorial section.
-
-```markdown
 # rust-base64-resolver-gen
 
 > Generate image endpoints by posting base64 image data to a temporary URL.
