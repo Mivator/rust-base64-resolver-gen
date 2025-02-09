@@ -7,11 +7,12 @@ use base64::Engine;
 use mime::IMAGE_PNG;
 use actix_web::http::header::{CACHE_CONTROL, CONTENT_TYPE};
 use std::sync::Mutex;
-use std::collections::HashMap;
+use lru::LruCache;
 use uuid::Uuid;
+use std::num::NonZeroUsize;
 
 struct AppState {
-    images: Mutex<HashMap<String, Vec<u8>>>,
+    images: Mutex<LruCache<String, Vec<u8>>>,
 }
 
 async fn post_image(
@@ -43,7 +44,8 @@ async fn post_image(
     println!("Successfully decoded {} bytes", decoded_bytes.len());
 
     let id = Uuid::new_v4().to_string();
-    data.images.lock().unwrap().insert(id.clone(), decoded_bytes);
+    let mut cache = data.images.lock().unwrap();
+    cache.put(id.clone(), decoded_bytes); // Automatische LRU-Handhabung
 
     let path = format!("/image/{}", id);
     Ok(HttpResponse::Ok().json(json!({
@@ -58,8 +60,8 @@ async fn get_image(
     let id = id.into_inner();
     println!("Received GET request for image ID: {}", id);
 
-    let images = data.images.lock().unwrap();
-    match images.get(&id) {
+    let mut cache = data.images.lock().unwrap();
+    match cache.get(&id) {
         Some(image_data) => {
             Ok(HttpResponse::Ok()
                 .insert_header((CONTENT_TYPE, IMAGE_PNG.to_string()))
@@ -75,7 +77,7 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on localhost:8080");
 
     let app_state = web::Data::new(AppState {
-        images: Mutex::new(HashMap::new()),
+        images: Mutex::new(LruCache::new(NonZeroUsize::new(10_000).unwrap())), 
     });
 
     HttpServer::new(move || {
