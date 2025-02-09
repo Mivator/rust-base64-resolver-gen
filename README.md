@@ -64,9 +64,15 @@ To upload a base64-encoded image, send a POST request to the `/image` endpoint w
 **Example using `curl`:**
 
 ```bash
-curl -X POST http://127.0.0.1:8080/image \
+curl -X POST http://127.0.0.1:3555/image \
 -H "Content-Type: application/json" \
 -d '{"base64": "your_base64_encoded_image_here"}'
+```
+Example Url Encoded:
+```bash
+curl -X POST http://127.0.0.1:3555/image \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-d "base64=your_base64_encoded_image_here"
 ```
 
 **Response:**
@@ -150,3 +156,14 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - Replace `"your_base64_encoded_image_here"` with an actual base64 string when testing.
 - Ensure that the UUID in the example matches the format returned by your server.
 - You can customize the README further based on your project's specific features or requirements.
+
+
+You can visiualize the images easily with Postman with this POST-Request:
+```js
+function constructVisualizerPayload() {
+    var response = pm.response.json();
+    return { url: pm.variables.get("RUST_IMAGE_URL") + response.urlPath };
+}
+
+pm.visualizer.set(`<p><a href="{{url}}" target="_blank" style="color: white;">{{url}}</a></p><img src="{{url}}" alt="Generated Image" />`, constructVisualizerPayload());
+```

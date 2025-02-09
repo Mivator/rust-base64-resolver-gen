@@ -6,11 +6,16 @@ use serde_json::json;
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use std::sync::Mutex;
-use std::collections::HashMap;
+use lru::LruCache;use std::num::NonZeroUsize;
 use uuid::Uuid;
 
+const HOSTNAME: &str = "0.0.0.0"; // Update with your desired hostname
+const PORT: u16 = 3555; // Update with your desired port
+const CACHE_SIZE: usize = 10_000; // update
+
+
 struct AppState {
-    images: Mutex<HashMap<String, Vec<u8>>>,
+    images: Mutex<LruCache<String, Vec<u8>>>,
 }
 
 #[derive(Deserialize)]
@@ -35,7 +40,8 @@ async fn post_image(
     };
 
     let id = Uuid::new_v4().to_string();
-    data.images.lock().unwrap().insert(id.clone(), decoded_bytes);
+    let mut cache = data.images.lock().unwrap();
+    cache.put(id.clone(), decoded_bytes);
 
     let path = format!("/image/{}", id);
     Ok(HttpResponse::Ok().json(json!({ "urlPath": path })))
@@ -65,7 +71,8 @@ async fn post_image_multipart(mut payload: Multipart, data: web::Data<AppState>)
     };
 
     let id = Uuid::new_v4().to_string();
-    data.images.lock().unwrap().insert(id.clone(), decoded_bytes);
+    let mut cache = data.images.lock().unwrap();
+    cache.put(id.clone(), decoded_bytes);
 
     let path = format!("/image/{}", id);
     Ok(HttpResponse::Ok().json(json!({ "urlPath": path })))
@@ -73,9 +80,9 @@ async fn post_image_multipart(mut payload: Multipart, data: web::Data<AppState>)
 
 async fn get_image(data: web::Data<AppState>, id: web::Path<String>) -> Result<impl Responder> {
     let id = id.into_inner();
-    let images = data.images.lock().unwrap();
 
-    match images.get(&id) {
+    let mut cache = data.images.lock().unwrap();
+    match cache.get(&id) {
         Some(image_data) => Ok(HttpResponse::Ok()
             .content_type("image/png")
             .body(image_data.clone())),
@@ -86,17 +93,17 @@ async fn get_image(data: web::Data<AppState>, id: web::Path<String>) -> Result<i
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(AppState {
-        images: Mutex::new(HashMap::new()),
+        images: Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap())),
     });
 
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
-            .route("/image", web::post().to(post_image))        // JSON & URL-Encoded
-            .route("/image/multipart", web::post().to(post_image_multipart)) // FormData
+            .route("/image", web::post().to(post_image))
+            .route("/image/multipart", web::post().to(post_image_multipart))
             .route("/image/{id}", web::get().to(get_image))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind((HOSTNAME, PORT))?
     .run()
     .await
 }
