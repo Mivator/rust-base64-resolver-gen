@@ -96,6 +96,9 @@ async fn main() -> std::io::Result<()> {
         images: Mutex::new(LruCache::new(NonZeroUsize::new(CACHE_SIZE).unwrap())),
     });
 
+    // log the running hostname and port
+    println!("Running on {}:{}", HOSTNAME, PORT);
+
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
