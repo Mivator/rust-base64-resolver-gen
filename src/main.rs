@@ -9,11 +9,9 @@ use std::sync::Mutex;
 use lru::LruCache;
 use std::num::NonZeroUsize;
 use uuid::Uuid;
-use deadpool_postgres::{Config, Pool, Runtime};
+use deadpool_postgres::{Pool, Runtime};
 use tokio_postgres::NoTls;
-use md5::{Md5, Digest};
 use config::{Config as ConfigFile, File, Environment};
-use serde::Deserialize;
 
 const CACHE_SIZE: usize = 10_000; // update
 
@@ -174,11 +172,8 @@ async fn main() -> std::io::Result<()> {
     println!("Configuration loaded: {:?}", settings);
 
     // Database configuration using URL
-    let cfg = deadpool_postgres::Config::from_url(&settings.database.url)
-        .map_err(|e| {
-            eprintln!("Failed to parse database URL: {}", e);
-            std::io::Error::new(std::io::ErrorKind::Other, "Database URL parsing failed")
-        })?;
+    let mut cfg = deadpool_postgres::Config::new();
+    cfg.url = Some(settings.database.url.clone());
 
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)
         .map_err(|e| {
