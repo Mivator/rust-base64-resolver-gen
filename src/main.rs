@@ -158,7 +158,7 @@ async fn get_image_by_md5(data: web::Data<AppState>, hash: web::Path<String>) ->
     // Query the iconAndAvatars table for the image data by hash
     let row = client
         .query_opt(
-            "SELECT \"imageData\" FROM \"iconAndAvatars\" WHERE hash = $1",
+            "SELECT \"imageData\" FROM \"IconAndAvatars\" WHERE hash = $1",
             &[&hash]
         )
         .await
@@ -221,7 +221,6 @@ async fn main() -> std::io::Result<()> {
     // Database configuration using URL
     let mut cfg = deadpool_postgres::Config::new();
     cfg.url = Some(settings.database.url.clone());
-    info!("Database URL configured: {}", settings.database.url);
 
     let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)
         .map_err(|e| {
